@@ -4,14 +4,13 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.LongSerializer
 import org.apache.kafka.common.serialization.StringSerializer
 
-// Nasty little hack to generate random ratings for fun movies
 class MovieLoader {
 
   static void main(args) {
 
     if (args.length < 1) {
       throw new IllegalArgumentException(
-          "🙀 This program takes one argument: the path to an environment configuration file.");
+          "🙀 This program takes one argument: the path to an environment configuration file.")
     }
     Properties props = ConfigLoader.loadConfig(args[0] as String)
 
@@ -26,10 +25,12 @@ class MovieLoader {
       long currentTime = System.currentTimeSeconds()
       println currentTime
 
-      def movieFile = new File(props.get('movies.file'))
+      def movieFile = new File(props.get('movies.file') as String)
       movieFile.eachLine { line ->
         println line
-        def pr = new ProducerRecord('raw-movies', null, line)
+        def pr = new ProducerRecord(props.get('input.ratings.topic.name') as String,
+                                    null,
+                                    line)
         producer.send(pr)
       }
     }

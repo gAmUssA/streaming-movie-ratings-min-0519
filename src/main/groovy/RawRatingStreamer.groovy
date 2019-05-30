@@ -12,7 +12,7 @@ class RawRatingStreamer {
   static void main(String[] args) {
     if (args.length < 1) {
       throw new IllegalArgumentException(
-          "🙀 This program takes one argument: the path to an environment configuration file.");
+          "🙀 This program takes one argument: the path to an environment configuration file.")
     }
     Properties props = ConfigLoader.loadConfig(args[0] as String)
 
@@ -34,7 +34,9 @@ class RawRatingStreamer {
           currentTime = System.currentTimeSeconds()
           println "RATINGS PRODUCED ${recordsProduced}"
         }
-        def pr = new ProducerRecord('raw-ratings', rating.movieId, Parser.toRawRating(rating).toString())
+        def pr = new ProducerRecord(props.get('input.movies.topic.name') as String,
+                                    rating.movieId,
+                                    Parser.toRawRating(rating).toString())
         producer.send(pr)
         recordsProduced++
       }
