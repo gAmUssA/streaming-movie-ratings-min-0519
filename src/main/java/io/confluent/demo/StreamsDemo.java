@@ -4,7 +4,6 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -36,6 +35,8 @@ import static io.confluent.demo.Serdes.getRatedMovieAvroSerde;
 import static io.confluent.devx.kafka.streams.TopologyVisualizer.visualize;
 import static java.lang.Integer.parseInt;
 import static java.lang.Short.parseShort;
+import static org.apache.kafka.common.serialization.Serdes.Double;
+import static org.apache.kafka.common.serialization.Serdes.Long;
 import static org.apache.kafka.common.serialization.Serdes.String;
 import static org.apache.kafka.streams.StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG;
 import static org.apache.kafka.streams.StreamsConfig.COMMIT_INTERVAL_MS_CONFIG;
@@ -53,8 +54,8 @@ public class StreamsDemo {
 
     config.put(StreamsConfig.APPLICATION_ID_CONFIG, envProps.getProperty("application.id"));
     config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, envProps.getProperty("bootstrap.servers"));
-    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, String().getClass());
-    config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, String().getClass());
+    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Long().getClass());
+    config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Double().getClass());
     config.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, envProps.getProperty("schema.registry.url"));
 
     config.put(REPLICATION_FACTOR_CONFIG, envProps.getProperty("default.topic.replication.factor"));
@@ -179,19 +180,19 @@ public class StreamsDemo {
 
     final KStream<Long, String> rawMovies =
         builder.stream(rawMoviesTopicName,
-                       Consumed.with(Serdes.Long(), Serdes.String()));
+                       Consumed.with(Long(), String()));
 
     // Parsed movies
     rawMovies
         .mapValues(Parser::parseMovie)
         .map((key, movie) -> new KeyValue<>(movie.getMovieId(), movie))
-        .to(avroMoviesTopicName, Produced.with(Serdes.Long(), movieSerde));
+        .to(avroMoviesTopicName, Produced.with(Long(), movieSerde));
 
     // Movies table
     return builder.table(avroMoviesTopicName,
                          Materialized.<Long, Movie, KeyValueStore<Bytes, byte[]>>as(avroMoviesTopicName + "-store")
                              .withValueSerde(movieSerde)
-                             .withKeySerde(Serdes.Long()));
+                             .withKeySerde(Long()));
   }
 
   protected static KTable<Long, Double> getRatingAverageTable(KStream<Long, String> rawRatings) {
@@ -210,18 +211,18 @@ public class StreamsDemo {
     KTable<Long, Long> count = ratingsById.count();
     KTable<Long, Double>
         sumTable = ratingsById.reduce(Double::sum,
-                                      Materialized.with(Serdes.Long(), Serdes.Double()));
+                                      Materialized.with(Long(), Double()));
 
     return sumTable.join(count,
                          (sum, count1) -> sum / count1,
-                         Materialized.with(Serdes.Long(), Serdes.Double()));
+                         Materialized.with(Long(), Double()));
   }
 
   private static KStream<Long, String> getRawRatingsStream(StreamsBuilder builder,
                                                            String rawRatingTopicName) {
     return builder.stream(rawRatingTopicName,
-                          Consumed.with(Serdes.Long(),
-                                        Serdes.String()));
+                          Consumed.with(Long(),
+                                        String()));
   }
 
   public static KTable<Long, RatedMovie> getRatedMoviesTable(KTable<Long, Movie> movies,
@@ -238,9 +239,9 @@ public class StreamsDemo {
         ratingAverage
             .join(movies, joiner, Materialized.<Long, RatedMovie, KeyValueStore<Bytes, byte[]>>as("rated-movies-store")
                 .withValueSerde(ratedMovieSerde)
-                .withKeySerde(Serdes.Long()));
+                .withKeySerde(Long()));
 
-    ratedMovies.toStream().to(ratedMovieTopic, Produced.with(Serdes.Long(), ratedMovieSerde));
+    ratedMovies.toStream().to(ratedMovieTopic, Produced.with(Long(), ratedMovieSerde));
     return ratedMovies;
   }
 
