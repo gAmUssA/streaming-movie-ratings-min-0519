@@ -49,7 +49,7 @@ import static org.apache.kafka.streams.StreamsConfig.topicPrefix;
 public class StreamsDemo {
 
   //region buildStreamsProperties
-  private Properties buildStreamsProperties(Properties envProps) {
+  protected Properties buildStreamsProperties(Properties envProps) {
     Properties config = new Properties();
 
     config.put(StreamsConfig.APPLICATION_ID_CONFIG, envProps.getProperty("application.id"));
@@ -153,6 +153,7 @@ public class StreamsDemo {
     final String rawMoviesTopicName = envProps.getProperty("input.movies.topic.name");
     final String avroMoviesTopicName = envProps.getProperty("output.movies.topic.name");
     final String ratedMoviesTopicName = envProps.getProperty("output.rated-movies.topic.name");
+    final String avgRatingsTopicName = envProps.getProperty("output.rating-averages.topic.name");
 
     // Movies processors
     SpecificAvroSerde<Movie> movieSerde = getMovieAvroSerde(envProps);
@@ -163,7 +164,7 @@ public class StreamsDemo {
 
     // Ratings processor
     KStream<Long, String> rawRatingsStream = getRawRatingsStream(builder, rawRatingTopicName);
-    KTable<Long, Double> ratingAverage = getRatingAverageTable(rawRatingsStream);
+    KTable<Long, Double> ratingAverage = getRatingAverageTable(rawRatingsStream, avgRatingsTopicName);
 
     SpecificAvroSerde<RatedMovie> ratedMovieSerde = getRatedMovieAvroSerde(envProps);
     getRatedMoviesTable(movies, ratingAverage, ratedMoviesTopicName, ratedMovieSerde);
@@ -173,10 +174,10 @@ public class StreamsDemo {
   }
   //endregion
 
-  private KTable<Long, Movie> getMoviesTable(StreamsBuilder builder,
-                                             String rawMoviesTopicName,
-                                             String avroMoviesTopicName,
-                                             SpecificAvroSerde<Movie> movieSerde) {
+  protected static KTable<Long, Movie> getMoviesTable(StreamsBuilder builder,
+                                                      String rawMoviesTopicName,
+                                                      String avroMoviesTopicName,
+                                                      SpecificAvroSerde<Movie> movieSerde) {
 
     final KStream<Long, String> rawMovies =
         builder.stream(rawMoviesTopicName,
@@ -195,7 +196,8 @@ public class StreamsDemo {
                              .withKeySerde(Long()));
   }
 
-  protected static KTable<Long, Double> getRatingAverageTable(KStream<Long, String> rawRatings) {
+  protected static KTable<Long, Double> getRatingAverageTable(KStream<Long, String> rawRatings,
+                                                              String avgRatingsTopicName) {
 
     KStream<Long, Rating> ratings =
         rawRatings
@@ -213,13 +215,16 @@ public class StreamsDemo {
         sumTable = ratingsById.reduce(Double::sum,
                                       Materialized.with(Long(), Double()));
 
-    return sumTable.join(count,
-                         (sum, count1) -> sum / count1,
-                         Materialized.with(Long(), Double()));
+    final KTable<Long, Double> join = sumTable.join(count,
+                                                    (sum, count1) -> sum / count1,
+                                                    Materialized.as(avgRatingsTopicName));
+    // persist the result in topic
+    join.toStream().to(avgRatingsTopicName);
+    return join;
   }
 
-  private static KStream<Long, String> getRawRatingsStream(StreamsBuilder builder,
-                                                           String rawRatingTopicName) {
+  protected static KStream<Long, String> getRawRatingsStream(StreamsBuilder builder,
+                                                             String rawRatingTopicName) {
     return builder.stream(rawRatingTopicName,
                           Consumed.with(Long(),
                                         String()));
