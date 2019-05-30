@@ -28,7 +28,7 @@ class MovieLoader {
       def movieFile = new File(props.get('movies.file') as String)
       movieFile.eachLine { line ->
         println line
-        def pr = new ProducerRecord(props.get('input.ratings.topic.name') as String,
+        def pr = new ProducerRecord(props.get('input.movies.topic.name') as String,
                                     null,
                                     line)
         producer.send(pr)

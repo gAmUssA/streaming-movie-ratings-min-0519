@@ -34,7 +34,7 @@ class RawRatingStreamer {
           currentTime = System.currentTimeSeconds()
           println "RATINGS PRODUCED ${recordsProduced}"
         }
-        def pr = new ProducerRecord(props.get('input.movies.topic.name') as String,
+        def pr = new ProducerRecord(props.get('input.ratings.topic.name') as String,
                                     rating.movieId,
                                     Parser.toRawRating(rating).toString())
         producer.send(pr)
