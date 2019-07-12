@@ -17,7 +17,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.time.LocalDateTime;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +49,7 @@ public class StreamsDemoE2ETest {
 
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
 
     final Properties properties = new Properties();
     properties.put("application.id", "kafka-movies-test");
@@ -61,7 +62,10 @@ public class StreamsDemoE2ETest {
     final Properties streamsConfig = streamsApp.buildStreamsProperties(properties);
 
     // workaround https://stackoverflow.com/a/50933452/27563
-    streamsConfig.setProperty(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-streams/" + LocalDateTime.now().toString());
+    final String tempDirectory = Files.createTempDirectory("kafka-streams")
+        .toAbsolutePath()
+        .toString();
+    streamsConfig.setProperty(StreamsConfig.STATE_DIR_CONFIG, tempDirectory);
 
     final Map<String, String> mockSerdeConfig = Serdes.getSerdeConfig(streamsConfig);
 
@@ -81,7 +85,7 @@ public class StreamsDemoE2ETest {
                                                            "raw-movies",
                                                            "movies",
                                                            movieSerde);
-    
+
     getRatedMoviesTable(moviesTable, ratingAverageTable, "rated-movies", ratedMovieSerde);
 
     final Topology topology = builder.build();

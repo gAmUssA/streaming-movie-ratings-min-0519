@@ -12,6 +12,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.Properties;
 
@@ -23,6 +25,7 @@ import static io.confluent.demo.fixture.MoviesAndRatingsData.DUMMY_KAFKA_CONFLUE
 import static io.confluent.demo.fixture.MoviesAndRatingsData.DUMMY_SR_CONFLUENT_CLOUD_8080;
 import static io.confluent.demo.fixture.MoviesAndRatingsData.LETHAL_WEAPON_MOVIE;
 import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
+import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Collections.singletonMap;
 import static org.junit.Assert.assertNotNull;
 
@@ -33,20 +36,23 @@ public class MoviesTopologyTest {
   private TopologyTestDriver td;
 
   @Before
-  public void setUp() {
-    
+  public void setUp() throws IOException {
+
     final Properties properties = new Properties();
     properties.put("application.id", "kafka-movies-test");
-    properties.put("bootstrap.servers",DUMMY_KAFKA_CONFLUENT_CLOUD_9092);
+    properties.put("bootstrap.servers", DUMMY_KAFKA_CONFLUENT_CLOUD_9092);
     properties.put("schema.registry.url", DUMMY_SR_CONFLUENT_CLOUD_8080);
     properties.put("default.topic.replication.factor", "1");
     properties.put("offset.reset.policy", "latest");
 
     final StreamsDemo streamsApp = new StreamsDemo();
     final Properties streamsConfig = streamsApp.buildStreamsProperties(properties);
-    
+
     // workaround https://stackoverflow.com/a/50933452/27563
-    streamsConfig.setProperty(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-streams/" + LocalDateTime.now().toString());
+    final String tempDirectory = Files.createTempDirectory("kafka-streams")
+        .toAbsolutePath()
+        .toString();
+    streamsConfig.setProperty(StreamsConfig.STATE_DIR_CONFIG, tempDirectory);
 
     StreamsBuilder builder = new StreamsBuilder();
 
