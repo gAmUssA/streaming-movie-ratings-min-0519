@@ -4,7 +4,7 @@ buildscript {
     kafkaVersion = '2.2.0'
     lombokVersion = '1.18.8'
   }
-  
+
   repositories {
     jcenter()
     maven { url "https://plugins.gradle.org/m2/" }
@@ -20,6 +20,7 @@ plugins {
   id 'java'
   id 'application'
   id 'groovy'
+  id 'idea'
 }
 
 apply plugin: "com.commercehub.gradle.plugin.avro"
@@ -64,4 +65,4 @@ avro {
   stringType = "String"
 }
 // Define the main class for the application
-mainClassName = 'io.confluent.demo.App'
+mainClassName = 'io.confluent.demo.StreamsDemo'
