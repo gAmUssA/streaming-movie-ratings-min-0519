@@ -20,7 +20,7 @@ A full source code published in `gAmUssA/streaming-movie-ratings-min-0519` repos
 
 toc::[]
 
-To be successful in executing all exercises, you need to have following installed:
+To be successful in executing all exercises, you need to have the following installed:
 
 * JDK (min JDK 8)
 ** Recommended way
@@ -32,7 +32,7 @@ To be successful in executing all exercises, you need to have following installe
 ** https://gitforwindows.org[Git for Windows] required if doing this exercise on Windows. 
 
 * Get example from GitHub
-** If you will follow steps below you should checkout only directory that has source code relevant to this post.
+** If you will follow steps below you should check out the only directory that has source code relevant to this post.
 +
 
 [source,bash]
@@ -43,8 +43,8 @@ git clone https://github.com/gAmUssA/streaming-movie-ratings-min-0519
 ----
 +
 
-* import gradle the project to IntelliJ IDEA
-* after project is imported to IntelliJ enable «Annotation Processing»
+* import Gradle the project to IntelliJ IDEA
+* after the project is imported to IntelliJ enable «Annotation Processing.»
 +
 
 .Build, Execution, Deployment => Compiler => Annotation Processors 
@@ -62,8 +62,8 @@ NOTE: To avoid any Lombok/IntelliJ IDEA integration problems install https://plu
 
 NOTE: You may need to modify proxy settings in `gradle/wrapper/gradle-wrapper.properties`
 
-WARNING: For each application you will be running from IntelliJ, you need to provide a full location of configuration file (e.g. `/usr/share/kafka-streams/configuration/dev.properties`) as program argument. 
-The application with throw an error otherwise.
+WARNING: For each application, you will be running from IntelliJ, you need to provide a full location of a configuration file (e.g. `/usr/share/kafka-streams/configuration/dev.properties`) as program argument. 
+Otherwise, the application will throw an error.
 
 === Run Streaming Movie Demo
 
@@ -90,7 +90,7 @@ Local page is http://localhost:9021
 ----
 docker run -ti --rm confluentinc/cp-ksql-cli:5.2.2 http://your-ksql-server-url:8088 # <1>
 ----
-<1> replace placegholder us
+<1> replace placegholder KSQL with actuall url
 
 * open KSQL panel and switch to «Query Editor.»
 +
@@ -107,12 +107,12 @@ WITH (KAFKA_TOPIC='<your-prefix>-rated-movies',VALUE_FORMAT='AVRO', KEY = 'movie
 select TITLE, RATING  from RATED_MOVIES where MOVIE_ID=362; --<2>
 ----
 <1> Create a table with Movie ratings. You need to use your `<your-prefix>-rated-movies` topic.
-Don't forget to replace `<your-prefix>-` with actuall topic prefix.
+Don't forget to replace `<your-prefix>-` with an actual topic prefix.
 <2> Find rating for _«Lethal Weapon»_ movie (`movie_id=362`)
 
 === Reset your application
 
-In case of problems, you can always reset state of the applications.
+In case of problems, you can always reset the state of the applications.
 
 ----
 kafka-streams-application-reset --application-id kafka-films --bootstrap-servers localhost:9092 --config-file ~/.ccloud/config.local --input-topics raw_movies,raw_ratings
