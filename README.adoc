@@ -2,7 +2,7 @@
 Viktor Gamov
 2019-05-30 14:00
 :imagesdir: img
-:icons:
+:icons: font
 :keywords:
 :toc:
 :experimental:
@@ -83,22 +83,32 @@ Run `src/main/groovy/RawRatingsStreamer` to generate test load.
 +
 Local page is http://localhost:9021
 
+** If Control Center is not available, you can start KSQL CLI with Docker using following command 
++
+
+[source,bash]
+----
+docker run -ti --rm confluentinc/cp-ksql-cli:5.2.2 http://your-ksql-server-url:8088 # <1>
+----
+<1> replace placegholder us
+
 * open KSQL panel and switch to «Query Editor.»
 +
 
 [source,sql]
 ----
 CREATE TABLE RATED_MOVIES \
-    (MOVIE_ID BIGINT,\
-     TITLE VARCHAR,\
-     RELEASE_YEAR BIGINT,\
-     RATING DOUBLE)\
+    (MOVIE_ID BIGINT, \
+     TITLE VARCHAR, \
+     RELEASE_YEAR BIGINT, \
+     RATING DOUBLE) \
 WITH (KAFKA_TOPIC='<your-prefix>-rated-movies',VALUE_FORMAT='AVRO', KEY = 'movie_id'); --<1>
 
 select TITLE, RATING  from RATED_MOVIES where MOVIE_ID=362; --<2>
 ----
-<1> Create a table with Movie ratings. You need to use your `rated-movies` topic
-<2> Find rating for Lethal Weapon (`movie_id=362`)
+<1> Create a table with Movie ratings. You need to use your `<your-prefix>-rated-movies` topic.
+Don't forget to replace `<your-prefix>-` with actuall topic prefix.
+<2> Find rating for _«Lethal Weapon»_ movie (`movie_id=362`)
 
 === Reset your application
 
