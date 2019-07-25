@@ -1,7 +1,7 @@
 = Streaming Movies Ratings
 Viktor Gamov
 2019-05-30 14:00
-:imagesdir: ../images
+:imagesdir: img
 :icons:
 :keywords:
 :toc:
@@ -20,15 +20,16 @@ A full source code published in `gAmUssA/streaming-movie-ratings-min-0519` repos
 
 toc::[]
 
-To be successful in executing all exercises, you need to have following installed.
+To be successful in executing all exercises, you need to have following installed:
 
-* Git
 * JDK (min JDK 8)
 ** Recommended way
 *** Install https://sdkman.io/install[sdkman]
 *** `sdk list java`
 *** `sdk install java <verison-provider>` e.g. `sdk install java 8.0.212-librca`
 * Install https://www.jetbrains.com/idea/download/[IntelliJ IDEA Community Edition]
+* Git
+** https://gitforwindows.org[Git for Windows] required if doing this exercise on Windows. 
 
 * Get example from GitHub
 ** If you will follow steps below you should checkout only directory that has source code relevant to this post.
@@ -43,6 +44,13 @@ git clone https://github.com/gAmUssA/streaming-movie-ratings-min-0519
 +
 
 * import gradle the project to IntelliJ IDEA
+* after project is imported to IntelliJ enable «Annotation Processing»
++
+
+.Build, Execution, Deployment => Compiler => Annotation Processors 
+image::enable_annotation_processing.png[]
+
+NOTE: To avoid any Lombok/IntelliJ IDEA integration problems install https://plugins.jetbrains.com/plugin/6317-lombok[Lombok Idea Plugin] image:lombok.png[]
 
 == Demo playbook
 
@@ -54,17 +62,16 @@ git clone https://github.com/gAmUssA/streaming-movie-ratings-min-0519
 
 NOTE: You may need to modify proxy settings in `gradle/wrapper/gradle-wrapper.properties`
 
-
 WARNING: For each application you will be running from IntelliJ, you need to provide a full location of configuration file (e.g. `/usr/share/kafka-streams/configuration/dev.properties`) as program argument. 
 The application with throw an error otherwise.
-
-=== Populate Movies and Rating Information
-
-Run `src/main/groovy/MovieLoader` to populate Movies.
 
 === Run Streaming Movie Demo
 
 Run `StreamsDemo` IntelliJ `Run..` command.
+
+=== Populate Movies and Rating Information
+
+Run `src/main/groovy/MovieLoader` to populate Movies.
 
 === Generate test load
 
@@ -73,7 +80,9 @@ Run `src/main/groovy/RawRatingsStreamer` to generate test load.
 === OPTIONAL if KSQL available: Consume result with KSQL UI in Control Center
 
 * Open Control Center. 
++
 Local page is http://localhost:9021
+
 * open KSQL panel and switch to «Query Editor.»
 +
 
@@ -84,7 +93,7 @@ CREATE TABLE RATED_MOVIES \
      TITLE VARCHAR,\
      RELEASE_YEAR BIGINT,\
      RATING DOUBLE)\
-WITH (KAFKA_TOPIC='rated-movies',VALUE_FORMAT='AVRO', KEY = 'movie_id'); --<1>
+WITH (KAFKA_TOPIC='<your-prefix>-rated-movies',VALUE_FORMAT='AVRO', KEY = 'movie_id'); --<1>
 
 select TITLE, RATING  from RATED_MOVIES where MOVIE_ID=362; --<2>
 ----

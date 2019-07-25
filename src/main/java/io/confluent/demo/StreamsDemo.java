@@ -51,6 +51,7 @@ public class StreamsDemo {
   //region buildStreamsProperties
   protected Properties buildStreamsProperties(Properties envProps) {
     Properties config = new Properties();
+    config.putAll(envProps);
 
     config.put(StreamsConfig.APPLICATION_ID_CONFIG, envProps.getProperty("application.id"));
     config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, envProps.getProperty("bootstrap.servers"));
