@@ -16,13 +16,14 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
+import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import lombok.extern.slf4j.Slf4j;
 
 import static io.confluent.demo.StreamsDemo.getRatingAverageTable;
@@ -47,7 +48,7 @@ public class RatingTopologiesTest {
 
     final Properties properties = new Properties();
     properties.put("application.id", "kafka-movies-test");
-    properties.put("bootstrap.servers",DUMMY_KAFKA_CONFLUENT_CLOUD_9092);
+    properties.put("bootstrap.servers", DUMMY_KAFKA_CONFLUENT_CLOUD_9092);
     properties.put("schema.registry.url", DUMMY_SR_CONFLUENT_CLOUD_8080);
     properties.put("default.topic.replication.factor", "1");
     properties.put("offset.reset.policy", "latest");
@@ -57,7 +58,14 @@ public class RatingTopologiesTest {
 
     StreamsBuilder builder = new StreamsBuilder();
     final KStream<Long, String> rawRatingsStream = getRawRatingsStream(builder, RAW_RATINGS_TOPIC_NAME);
-    final KTable<Long, Double> ratingAverageTable = getRatingAverageTable(rawRatingsStream, "average-ratings");
+
+    final Map<String, String> mockSerdeConfig = Serdes.getSerdeConfig(streamsConfig);
+    SpecificAvroSerde<CountAndSum> countAndSumSerde = new SpecificAvroSerde<>(new MockSchemaRegistryClient());
+    countAndSumSerde.configure(mockSerdeConfig, false);
+
+    final KTable<Long, Double> ratingAverageTable = getRatingAverageTable(rawRatingsStream,
+                                                                          "average-ratings",
+                                                                          countAndSumSerde);
 
     final Topology topology = builder.build();
     log.info("topology = \n" + topology.describe());
@@ -82,9 +90,10 @@ public class RatingTopologiesTest {
     final TestOutputTopic<Long, Double>
         outputTopic =
         testDriver.createOutputTopic(AVERAGE_RATINGS_TOPIC_NAME, new LongDeserializer(), new DoubleDeserializer());
-    final List<KeyValue<Long, Double>> longDoubleKeyValue = outputTopic.readKeyValuesToList();
+    final KeyValue<Long, Double> longDoubleKeyValue = outputTopic.readKeyValuesToList().get(1);
     assertThat(longDoubleKeyValue,
                equalTo(new KeyValue<>(362L, 9.0)));
+    inputTopic.pipeValueList(Arrays.asList(LETHAL_WEAPON_RATING_10, LETHAL_WEAPON_RATING_8));
 
     final KeyValueStore<Long, Double>
         keyValueStore =

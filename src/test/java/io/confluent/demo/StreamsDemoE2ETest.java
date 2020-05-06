@@ -82,7 +82,11 @@ public class StreamsDemoE2ETest {
     ratedMovieSerde.configure(mockSerdeConfig, false);
 
     final KStream<Long, String> rawRatingsStream = getRawRatingsStream(builder, "raw-ratings");
-    final KTable<Long, Double> ratingAverageTable = getRatingAverageTable(rawRatingsStream, "average-ratings");
+    SpecificAvroSerde<CountAndSum> countAndSumSerde = new SpecificAvroSerde<>(new MockSchemaRegistryClient());
+    countAndSumSerde.configure(mockSerdeConfig, false);
+    
+    final KTable<Long, Double> ratingAverageTable = getRatingAverageTable(rawRatingsStream, "average-ratings",
+                                                                          countAndSumSerde);
 
     final KTable<Long, Movie> moviesTable = getMoviesTable(builder,
                                                            "raw-movies",

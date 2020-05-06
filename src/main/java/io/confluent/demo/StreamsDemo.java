@@ -165,7 +165,10 @@ public class StreamsDemo {
 
     // Ratings processor
     KStream<Long, String> rawRatingsStream = getRawRatingsStream(builder, rawRatingTopicName);
-    KTable<Long, Double> ratingAverage = getRatingAverageTable(rawRatingsStream, avgRatingsTopicName);
+    SpecificAvroSerde<CountAndSum> countAndSumSerde = Serdes.getCountAndSumSerde(envProps);
+    KTable<Long, Double> ratingAverage = getRatingAverageTable(rawRatingsStream,
+                                                               avgRatingsTopicName,
+                                                               countAndSumSerde);
 
     SpecificAvroSerde<RatedMovie> ratedMovieSerde = getRatedMovieAvroSerde(envProps);
     getRatedMoviesTable(movies, ratingAverage, ratedMoviesTopicName, ratedMovieSerde);
@@ -198,30 +201,36 @@ public class StreamsDemo {
   }
 
   protected static KTable<Long, Double> getRatingAverageTable(KStream<Long, String> rawRatings,
-                                                              String avgRatingsTopicName) {
+                                                              String avgRatingsTopicName,
+                                                              SpecificAvroSerde<CountAndSum> countAndSumSerde) {
 
-    KStream<Long, Rating> ratings =
-        rawRatings
-            .mapValues(Parser::parseRating)
-            .map((key, rating) -> new KeyValue<>(rating.getMovieId(), rating));
+    KStream<Long, Rating> ratings = rawRatings
+        .mapValues(Parser::parseRating)
+        .map((key, rating) -> new KeyValue<>(rating.getMovieId(), rating));
 
     // Parsing Ratings
-    KGroupedStream<Long, Double> ratingsById =
-        ratings
-            .mapValues(Rating::getRating)
-            .groupByKey();
+    KGroupedStream<Long, Double> ratingsById = ratings
+        .mapValues(Rating::getRating)
+        .groupByKey();
 
-    KTable<Long, Long> count = ratingsById.count();
-    KTable<Long, Double>
-        sumTable = ratingsById.reduce(Double::sum,
-                                      Materialized.with(Long(), Double()));
+    
+    // Implemented best practice https://cwiki.apache.org/confluence/display/KAFKA/Kafka+Stream+Usage+Patterns#KafkaStreamUsagePatterns-Howtocomputean(windowed)average?
+    final KTable<Long, CountAndSum> ratingCountAndSum =
+        ratingsById.aggregate(() -> new CountAndSum(0L, 0.0),
+                              (key, value, aggregate) -> {
+                                aggregate.setCount(aggregate.getCount() + 1);
+                                aggregate.setSum(aggregate.getSum() + value);
+                                return aggregate;
+                              },
+                              Materialized.with(Long(), countAndSumSerde));
 
-    final KTable<Long, Double> join = sumTable.join(count,
-                                                    (sum, count1) -> sum / count1,
-                                                    Materialized.as(avgRatingsTopicName));
+    final KTable<Long, Double> ratingAverage =
+        ratingCountAndSum.mapValues(value -> value.getSum() / value.getCount(),
+                                    Materialized.as("average-ratings"));
+
     // persist the result in topic
-    join.toStream().to(avgRatingsTopicName);
-    return join;
+    ratingAverage.toStream().to(avgRatingsTopicName);
+    return ratingAverage;
   }
 
   protected static KStream<Long, String> getRawRatingsStream(StreamsBuilder builder,
