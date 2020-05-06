@@ -1,25 +1,28 @@
 package io.confluent.demo;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.TestInputTopic;
+import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.test.ConsumerRecordFactory;
-import org.apache.kafka.streams.test.OutputVerifier;
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -96,32 +99,31 @@ public class StreamsDemoE2ETest {
   @Test
   public void validateRatingForLethalWeapon() {
 
-    ConsumerRecordFactory<Long, String> rawRatingsRecordFactory =
-        new ConsumerRecordFactory<>(RAW_RATINGS_TOPIC_NAME, new LongSerializer(), new StringSerializer());
+    final TestInputTopic<Long, String>
+        rawRatingsTopic =
+        td.createInputTopic(RAW_RATINGS_TOPIC_NAME, new LongSerializer(), new StringSerializer());
 
-    ConsumerRecordFactory<Long, String> rawMoviesRecordFactory =
-        new ConsumerRecordFactory<>(RAW_MOVIES_TOPIC_NAME, new LongSerializer(), new StringSerializer());
+    final TestInputTopic<Long, String>
+        rawMoviesTopic =
+        td.createInputTopic(RAW_MOVIES_TOPIC_NAME, new LongSerializer(), new StringSerializer());
 
-    td.pipeInput(rawMoviesRecordFactory.create(LETHAL_WEAPON_MOVIE));
+    rawMoviesTopic.pipeValueList(Collections.singletonList(LETHAL_WEAPON_MOVIE));
 
-    List<ConsumerRecord<byte[], byte[]>> list = new ArrayList<>();
-    for (int i = 0; i < 3; i++) {
-      list.add(rawRatingsRecordFactory.create(LETHAL_WEAPON_RATING_9));
-    }
-    td.pipeInput(list);
+    rawRatingsTopic
+        .pipeValueList(Arrays.asList(LETHAL_WEAPON_RATING_9, LETHAL_WEAPON_RATING_9, LETHAL_WEAPON_RATING_9));
 
-    List<ProducerRecord<Long, RatedMovie>> result = new ArrayList<>();
-    for (int i = 0; i < 3; i++) {
-      result.add(td.readOutput(RATED_MOVIES_TOPIC_NAME, new LongDeserializer(), ratedMovieSerde.deserializer()));
-    }
+    final TestOutputTopic<Long, RatedMovie>
+        outputTopic =
+        td.createOutputTopic(RATED_MOVIES_TOPIC_NAME, new LongDeserializer(), ratedMovieSerde.deserializer());
+    final List<KeyValue<Long, RatedMovie>> result = outputTopic.readKeyValuesToList();
+
     result.forEach(record -> {
       ProducerRecord<Long, RatedMovie>
           lethalWeaponRecord =
           new ProducerRecord<>(RATED_MOVIES_TOPIC_NAME, 362L, new RatedMovie(362L, "Lethal Weapon", 1987, 9.0));
-      OutputVerifier.compareValue(record, lethalWeaponRecord);
+      Assert.assertThat(record.value, CoreMatchers.equalTo(lethalWeaponRecord.value()));
     });
-
-
+    
   }
 
 }

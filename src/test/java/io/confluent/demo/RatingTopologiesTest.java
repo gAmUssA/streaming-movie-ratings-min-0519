@@ -1,24 +1,26 @@
 package io.confluent.demo;
 
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.DoubleDeserializer;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.TestInputTopic;
+import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.test.ConsumerRecordFactory;
-import org.apache.kafka.streams.test.OutputVerifier;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +31,9 @@ import static io.confluent.demo.fixture.MoviesAndRatingsData.DUMMY_KAFKA_CONFLUE
 import static io.confluent.demo.fixture.MoviesAndRatingsData.DUMMY_SR_CONFLUENT_CLOUD_8080;
 import static io.confluent.demo.fixture.MoviesAndRatingsData.LETHAL_WEAPON_RATING_10;
 import static io.confluent.demo.fixture.MoviesAndRatingsData.LETHAL_WEAPON_RATING_8;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 
 @Slf4j
 public class RatingTopologiesTest {
@@ -68,21 +72,19 @@ public class RatingTopologiesTest {
 
   @Test
   public void validateAverageRating() {
-    final ConsumerRecordFactory<Long, String>
-        rawRatingRecordFactory =
-        new ConsumerRecordFactory<>(RAW_RATINGS_TOPIC_NAME, new LongSerializer(),
-                                    new StringSerializer());
+    final TestInputTopic<Long, String>
+        inputTopic =
+        testDriver.createInputTopic(RAW_RATINGS_TOPIC_NAME, new LongSerializer(), new StringSerializer());
 
     // Lethal Weapon ratings
-    testDriver.pipeInput(Arrays.asList(rawRatingRecordFactory.create(LETHAL_WEAPON_RATING_10),
-                                       rawRatingRecordFactory.create(LETHAL_WEAPON_RATING_8)));
+    inputTopic.pipeValueList(Arrays.asList(LETHAL_WEAPON_RATING_10, LETHAL_WEAPON_RATING_8));
 
-    final ProducerRecord<Long, Double>
-        o1 =
-        testDriver.readOutput(AVERAGE_RATINGS_TOPIC_NAME, new LongDeserializer(),
-                              new DoubleDeserializer());
-
-   OutputVerifier.compareKeyValue(o1, 362L, 10.0);
+    final TestOutputTopic<Long, Double>
+        outputTopic =
+        testDriver.createOutputTopic(AVERAGE_RATINGS_TOPIC_NAME, new LongDeserializer(), new DoubleDeserializer());
+    final List<KeyValue<Long, Double>> longDoubleKeyValue = outputTopic.readKeyValuesToList();
+    assertThat(longDoubleKeyValue,
+               equalTo(new KeyValue<>(362L, 9.0)));
 
     final KeyValueStore<Long, Double>
         keyValueStore =

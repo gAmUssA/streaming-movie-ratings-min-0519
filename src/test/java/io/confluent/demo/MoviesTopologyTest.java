@@ -4,17 +4,16 @@ import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.test.ConsumerRecordFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.time.LocalDateTime;
 import java.util.Properties;
 
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
@@ -25,7 +24,6 @@ import static io.confluent.demo.fixture.MoviesAndRatingsData.DUMMY_KAFKA_CONFLUE
 import static io.confluent.demo.fixture.MoviesAndRatingsData.DUMMY_SR_CONFLUENT_CLOUD_8080;
 import static io.confluent.demo.fixture.MoviesAndRatingsData.LETHAL_WEAPON_MOVIE;
 import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
-import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Collections.singletonMap;
 import static org.junit.Assert.assertNotNull;
 
@@ -72,12 +70,11 @@ public class MoviesTopologyTest {
 
   @Test
   public void validateAvroMovie() {
-    ConsumerRecordFactory<Long, String> rawMovieRecordFactory =
-        new ConsumerRecordFactory<>(RAW_MOVIES_TOPIC_NAME, new LongSerializer(),
-                                    new StringSerializer());
-
-    td.pipeInput(rawMovieRecordFactory.create(LETHAL_WEAPON_MOVIE));
-
+    final TestInputTopic<Long, String>
+        inputTopic =
+        td.createInputTopic(RAW_MOVIES_TOPIC_NAME, new LongSerializer(), new StringSerializer());
+    inputTopic.pipeInput(LETHAL_WEAPON_MOVIE);
+    
     //td.readOutput("")
     final KeyValueStore<Long, Movie> movieStore =
         td.getKeyValueStore("movies-store");
